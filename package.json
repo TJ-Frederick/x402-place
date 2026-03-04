@@ -1,0 +1,22 @@
+{
+  "name": "place",
+  "version": "1.0.0",
+  "description": "$place — micropayment pixel canvas powered by x402",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute place-pixels --local --file=schema.sql",
+    "db:init:remote": "wrangler d1 execute place-pixels --remote --file=schema.sql"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "hono": "^4.12.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.70.0"
+  }
+}

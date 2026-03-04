@@ -1,0 +1,15 @@
+name = "place"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+PAYMENT_ADDRESS = "0xDA60059faBf3e71338c27C505CED519f55d605DD"
+FACILITATOR_URL = "https://x402.stablecoin.xyz"
+NETWORK = "eip155:723"
+BASE_PRICE = "$0.0001"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "place-pixels"
+database_id = "da62993b-59de-4493-bcc2-c45721166d0d"
