@@ -10,7 +10,7 @@ import {
   getFactions,
   getRecentPlacements,
   getStats,
-  decayPixels,
+  restoreFromPlacements,
   getPixelPrice,
   getPixelPriceDollars,
   CANVAS_SIZE,
@@ -66,7 +66,7 @@ app.get("/api/pixel/:x/:y", async (c) => {
     pixel,
     price: priceDollars,
     priceCents: price,
-    isOccupied: pixel !== null && pixel.brightness > 0,
+    isOccupied: pixel !== null,
   });
 });
 
@@ -211,7 +211,7 @@ app.post("/api/pixel", async (c) => {
 
   // --- Path 2: No payment — return 402 ---
   const paymentRequired = buildPaymentRequired(
-    new URL(c.req.url).origin, x, y, existing !== null && existing.brightness > 0,
+    new URL(c.req.url).origin, x, y, existing !== null,
     requiredPriceDollars, requiredPrice, c.env,
   );
   const encoded = toBase64(JSON.stringify(paymentRequired));
@@ -235,11 +235,11 @@ app.get("/api/activity", async (c) => {
   return c.json({ recent });
 });
 
-// Trigger decay (can be called by a cron or manually)
-app.post("/api/decay", async (c) => {
+// Restore canvas from placements history (recovers deleted/decayed pixels)
+app.post("/api/restore", async (c) => {
   await initDb(c.env.DB);
-  const removed = await decayPixels(c.env.DB);
-  return c.json({ removed, message: `Decayed ${removed} pixels` });
+  const restored = await restoreFromPlacements(c.env.DB);
+  return c.json({ restored, message: `Restored ${restored} pixels from placement history` });
 });
 
 // Health check

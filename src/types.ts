@@ -12,7 +12,6 @@ export interface Pixel {
   y: number;
   color: string;
   owner: string | null;
-  brightness: number;
   price_cents: number;
   last_placed_at: string;
   faction: string | null;
@@ -40,7 +39,6 @@ export interface CanvasState {
     x: number;
     y: number;
     color: string;
-    brightness: number;
     owner: string | null;
     faction: string | null;
   }>;

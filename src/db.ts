@@ -1,7 +1,6 @@
 import type { Pixel, Faction, Placement } from "./types";
 
 const CANVAS_SIZE = 500;
-const DECAY_RATE = 5; // 5% per hour
 const MAX_PRICE_CENTS = 10; // $0.10 cap
 const BASE_PRICE_CENTS = 0.01; // $0.0001
 
@@ -36,7 +35,7 @@ export async function initDb(db: D1Database) {
 }
 
 export function getPixelPrice(existing: Pixel | null): number {
-  if (!existing || existing.brightness <= 0) return BASE_PRICE_CENTS;
+  if (!existing) return BASE_PRICE_CENTS;
   return Math.min(existing.price_cents * 2, MAX_PRICE_CENTS);
 }
 
@@ -45,18 +44,8 @@ export function getPixelPriceDollars(existing: Pixel | null): string {
   return `$${(cents / 100).toFixed(6)}`;
 }
 
-function applyDecay(pixel: Pixel): Pixel {
-  const now = Date.now();
-  const placed = new Date(pixel.last_placed_at + "Z").getTime();
-  const hoursElapsed = (now - placed) / (1000 * 60 * 60);
-  const decayedBrightness = Math.max(0, pixel.brightness - DECAY_RATE * hoursElapsed);
-  return { ...pixel, brightness: decayedBrightness };
-}
-
 export async function getPixel(db: D1Database, x: number, y: number): Promise<Pixel | null> {
-  const row = await db.prepare("SELECT * FROM pixels WHERE x = ? AND y = ?").bind(x, y).first<Pixel>();
-  if (!row) return null;
-  return applyDecay(row);
+  return db.prepare("SELECT * FROM pixels WHERE x = ? AND y = ?").bind(x, y).first<Pixel>();
 }
 
 export async function placePixel(
@@ -118,15 +107,15 @@ export async function getCanvasRegion(
   y2: number,
 ): Promise<Pixel[]> {
   const rows = await db
-    .prepare("SELECT * FROM pixels WHERE x >= ? AND x < ? AND y >= ? AND y < ? AND brightness > 0")
+    .prepare("SELECT * FROM pixels WHERE x >= ? AND x < ? AND y >= ? AND y < ?")
     .bind(x1, x2, y1, y2)
     .all<Pixel>();
-  return (rows.results || []).map(applyDecay).filter((p) => p.brightness > 0);
+  return rows.results || [];
 }
 
 export async function getAllPixels(db: D1Database): Promise<Pixel[]> {
-  const rows = await db.prepare("SELECT * FROM pixels WHERE brightness > 0").all<Pixel>();
-  return (rows.results || []).map(applyDecay).filter((p) => p.brightness > 0);
+  const rows = await db.prepare("SELECT * FROM pixels").all<Pixel>();
+  return rows.results || [];
 }
 
 export async function getFactions(db: D1Database): Promise<Faction[]> {
@@ -142,7 +131,7 @@ export async function getRecentPlacements(db: D1Database, limit = 50): Promise<P
 export async function getStats(db: D1Database): Promise<{ total_pixels_placed: number; active_pixels: number; total_spent: number }> {
   const [totalResult, activeResult, spentResult] = await db.batch([
     db.prepare("SELECT COUNT(*) as count FROM placements"),
-    db.prepare("SELECT COUNT(*) as count FROM pixels WHERE brightness > 0"),
+    db.prepare("SELECT COUNT(*) as count FROM pixels"),
     db.prepare("SELECT COALESCE(SUM(price_cents), 0) as total FROM placements"),
   ]);
   return {
@@ -152,10 +141,15 @@ export async function getStats(db: D1Database): Promise<{ total_pixels_placed: n
   };
 }
 
-export async function decayPixels(db: D1Database): Promise<number> {
-  // Delete pixels that have fully decayed (placed > 20 hours ago = 100% / 5% per hour)
+// Restore canvas state from placements history (uses last placement per pixel)
+export async function restoreFromPlacements(db: D1Database): Promise<number> {
   const result = await db.prepare(
-    `DELETE FROM pixels WHERE datetime(last_placed_at, '+20 hours') < datetime('now')`
+    `INSERT OR REPLACE INTO pixels (x, y, color, owner, brightness, price_cents, last_placed_at, faction)
+     SELECT p.x, p.y, p.color, p.owner, 100.0, p.price_cents, p.placed_at, p.faction
+     FROM placements p
+     INNER JOIN (
+       SELECT x, y, MAX(id) as max_id FROM placements GROUP BY x, y
+     ) latest ON p.id = latest.max_id`
   ).run();
   return result.meta?.changes || 0;
 }

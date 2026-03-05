@@ -166,6 +166,108 @@ export function serveHtml(env: Env): string {
     background: rgba(0, 230, 118, 0.05);
   }
 
+  /* ========== INFO BUTTON & MODAL ========== */
+
+  .info-btn {
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Oxanium', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .info-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  .info-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 14, 0.85);
+    backdrop-filter: blur(6px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+  }
+  .info-overlay.show { display: flex; }
+  .info-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    max-width: 480px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 28px 28px 22px;
+    box-shadow: 0 8px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 212, 255, 0.06);
+  }
+  .info-modal h2 {
+    font-family: 'Oxanium', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 18px;
+  }
+  .info-modal h2 span { color: var(--accent); }
+  .info-modal h3 {
+    font-family: 'Oxanium', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    margin: 18px 0 8px;
+  }
+  .info-modal p {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .info-modal .info-factions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 12px;
+  }
+  .info-modal .info-faction-tag {
+    font-family: 'Oxanium', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+  .info-modal .info-close {
+    display: block;
+    width: 100%;
+    margin-top: 18px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'Oxanium', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .info-modal .info-close:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
   /* ========== LAYOUT ========== */
 
   .main {
@@ -196,6 +298,7 @@ export function serveHtml(env: Env): string {
     position: absolute;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    box-shadow: 0 0 0 2px var(--border), 0 0 40px rgba(0, 212, 255, 0.08);
   }
   .coords {
     position: absolute;
@@ -1032,7 +1135,24 @@ export function serveHtml(env: Env): string {
       <span class="badge-emblem" id="badge-emblem"></span>
       <span id="badge-name"></span>
     </div>
+    <button class="info-btn" id="info-btn" onclick="toggleInfo()" title="How it works">?</button>
     <button class="wallet-btn" id="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
+  </div>
+</div>
+
+<div class="info-overlay" id="info-overlay" onclick="if(event.target===this)toggleInfo()">
+  <div class="info-modal">
+    <h2><span>$</span>place &mdash; How It Works</h2>
+    <h3>The Canvas</h3>
+    <p>A 500&times;500 shared pixel grid. Every pixel is permanent &mdash; once placed, it stays forever unless someone overwrites it.</p>
+    <h3>Claiming Pixels</h3>
+    <p>Connect a wallet, pick a color, click a pixel, and pay with SBC on the Radius network. Unclaimed pixels start at $0.0001. Overwriting someone else's pixel costs double their last price, up to a $0.10 cap.</p>
+    <h3>Factions</h3>
+    <p>Your wallet address determines your faction. Fight for territory alongside your allies.</p>
+    <div class="info-factions" id="info-factions"></div>
+    <h3>Payments</h3>
+    <p>Powered by the x402 payment protocol &mdash; HTTP 402 responses trigger automatic wallet prompts. No accounts, no sign-ups.</p>
+    <button class="info-close" onclick="toggleInfo()">Got it</button>
   </div>
 </div>
 
@@ -1100,7 +1220,6 @@ export function serveHtml(env: Env): string {
         <div class="row"><span class="label">position</span><span class="value" id="info-pos">--</span></div>
         <div class="row"><span class="label">owner</span><span class="value" id="info-owner">unclaimed</span></div>
         <div class="row"><span class="label">faction</span><span class="value" id="info-faction">--</span></div>
-        <div class="row"><span class="label">brightness</span><span class="value" id="info-brightness">--</span></div>
         <div class="row"><span class="label">price</span><span class="value price-value" id="info-price">$0.0001</span></div>
       </div>
       <button class="place-btn" id="place-btn" disabled>Connect to Claim</button>
@@ -1128,7 +1247,6 @@ export function serveHtml(env: Env): string {
         <div class="row"><span class="label">position</span><span class="value" id="m-info-pos">--</span></div>
         <div class="row"><span class="label">owner</span><span class="value" id="m-info-owner">unclaimed</span></div>
         <div class="row"><span class="label">faction</span><span class="value" id="m-info-faction">--</span></div>
-        <div class="row"><span class="label">brightness</span><span class="value" id="m-info-brightness">--</span></div>
         <div class="row" style="grid-column: span 2"><span class="label">price</span><span class="value price-value" id="m-info-price">$0.0001</span></div>
       </div>
     </div>
@@ -1175,6 +1293,26 @@ function getEmblem(name) {
   return FACTION_EMBLEMS[name] || '\\u25CF';
 }
 
+function toggleInfo() {
+  var overlay = document.getElementById('info-overlay');
+  overlay.classList.toggle('show');
+}
+
+// Populate faction tags in info modal
+(function() {
+  var container = document.getElementById('info-factions');
+  if (!container) return;
+  FACTIONS.forEach(function(f) {
+    var tag = document.createElement('span');
+    tag.className = 'info-faction-tag';
+    tag.style.color = f.color;
+    tag.style.borderColor = f.color;
+    tag.style.background = f.color + '12';
+    tag.textContent = (FACTION_EMBLEMS[f.name] || '') + ' ' + f.name;
+    container.appendChild(tag);
+  });
+})();
+
 function getFactionForAddress(addr) {
   var idx = parseInt(addr.slice(-1).toLowerCase(), 16) % FACTIONS.length;
   return FACTIONS[idx];
@@ -1197,8 +1335,16 @@ var wrap = document.getElementById('canvas-wrap');
 
 // == Wallet ==
 
+function isMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 async function connectWallet() {
   if (!window.ethereum) {
+    if (isMobile()) {
+      window.location.href = 'https://metamask.app.link/dapp/' + window.location.host + window.location.pathname;
+      return;
+    }
     document.getElementById('no-wallet').style.display = 'block';
     return;
   }
@@ -1379,12 +1525,9 @@ function drawPixels() {
     }
   }
   state.pixels.forEach(function(p) {
-    var a = p.brightness / 100;
-    if (a <= 0) return;
-    ctx.globalAlpha = a; ctx.fillStyle = p.color;
+    ctx.fillStyle = p.color;
     ctx.fillRect(p.x, p.y, 1, 1);
   });
-  ctx.globalAlpha = 1;
 }
 
 // == Pan/Zoom ==
@@ -1446,32 +1589,27 @@ async function selectPixel(x, y) {
   try {
     var res = await fetch('/api/pixel/' + x + '/' + y);
     var data = await res.json();
-    if (data.pixel && data.pixel.brightness > 0) {
+    if (data.pixel) {
       state.pixelOwned = true;
       var ownerText = data.pixel.owner ? data.pixel.owner.slice(0,8) + '..' : 'unclaimed';
       var factionText = data.pixel.faction || '--';
-      var brightnessText = Math.round(data.pixel.brightness) + '%';
       document.getElementById('info-owner').textContent = ownerText;
       document.getElementById('info-faction').textContent = factionText;
-      document.getElementById('info-brightness').textContent = brightnessText;
       document.getElementById('info-price').textContent = data.price;
       document.getElementById('info-price').className = 'value overwrite-value';
       // Mobile sync
       var mo = document.getElementById('m-info-owner'); if (mo) mo.textContent = ownerText;
       var mf = document.getElementById('m-info-faction'); if (mf) mf.textContent = factionText;
-      var mb = document.getElementById('m-info-brightness'); if (mb) mb.textContent = brightnessText;
       var mp = document.getElementById('m-info-price'); if (mp) { mp.textContent = data.price; mp.className = 'value overwrite-value'; }
     } else {
       state.pixelOwned = false;
       document.getElementById('info-owner').textContent = 'unclaimed';
       document.getElementById('info-faction').textContent = '--';
-      document.getElementById('info-brightness').textContent = '--';
       document.getElementById('info-price').textContent = data.price;
       document.getElementById('info-price').className = 'value price-value';
       // Mobile sync
       var mo = document.getElementById('m-info-owner'); if (mo) mo.textContent = 'unclaimed';
       var mf = document.getElementById('m-info-faction'); if (mf) mf.textContent = '--';
-      var mb = document.getElementById('m-info-brightness'); if (mb) mb.textContent = '--';
       var mp = document.getElementById('m-info-price'); if (mp) { mp.textContent = data.price; mp.className = 'value price-value'; }
     }
   } catch (e) { console.error(e); }
@@ -1639,7 +1777,7 @@ async function signAndPlacePixel() {
 function onPixelPlaced(data) {
   state.pixels.set(state.selectedX + ',' + state.selectedY, {
     x: state.selectedX, y: state.selectedY,
-    color: state.color, brightness: 100,
+    color: state.color,
     owner: data.pixel.owner, faction: state.faction.name,
   });
   drawPixels(); render();
@@ -1694,7 +1832,7 @@ function calculateTerritory() {
   var counts = {};
   var total = 0;
   state.pixels.forEach(function(p) {
-    if (p.brightness > 0 && p.faction) {
+    if (p.faction) {
       counts[p.faction] = (counts[p.faction] || 0) + 1;
       total++;
     }
